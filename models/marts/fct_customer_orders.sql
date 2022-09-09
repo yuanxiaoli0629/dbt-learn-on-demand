@@ -13,34 +13,34 @@ payments as (
 ), 
 --logic CTEs
 completed_payments as (
-    select  orderid as order_id,
-            max(created) as payment_finalized_date,
-            sum(amount) / 100.0 as total_amount_paid
+    select  order_id,
+            max(payment_created_at) as payment_finalized_date,
+            sum(payment_amount) / 100.0 as total_amount_paid
     from payments
-    where status <> 'fail'
+    where payment_status <> 'fail'
     group by 1
 ),
 
 paid_orders as (
-    select  orders.id as order_id,
-            orders.user_id	as customer_id,
-            orders.order_date AS order_placed_at,
-            orders.status AS order_status,
+    select  orders.order_id,
+            orders.customer_id,
+            orders.order_placed_at,
+            orders.order_status,
             completed_payments.total_amount_paid,
             completed_payments.payment_finalized_date,
-            customers.first_name    as customer_first_name,
-            customers.last_name as customer_last_name
+            customers.customer_first_name,
+            customers.customer_last_name
     FROM orders
-    left join completed_payments on orders.id = completed_payments.order_id
-    left join customers on orders.user_id = customers.id 
+    left join completed_payments on orders.order_id = completed_payments.order_id
+    left join customers on orders.customer_id = customers.customer_id 
 ),
 customer_orders as (
-    select  customers.id as customer_id,
-            min(orders.order_date) as first_order_date,
-            max(orders.order_date) as most_recent_order_date,
-            count(orders.id) as number_of_orders
+    select  customers.customer_id,
+            min(orders.order_placed_at) as first_order_date,
+            max(orders.order_placed_at) as most_recent_order_date,
+            count(orders.order_id) as number_of_orders
     from customers  
-    left join orders on orders.user_id = customers.id 
+    left join orders on orders.customer_id = customers.customer_id 
     group by 1
 ), 
 --final CTEs
@@ -52,8 +52,8 @@ final as (
         paid_orders.order_status,
         paid_orders.total_amount_paid,
         paid_orders.payment_finalized_date,
-        customers.customer_first_name,
-        customers.customer_last_name,
+        paid_orders.customer_first_name,
+        paid_orders.customer_last_name,
 
         row_number() over (order BY paid_orders.order_id) as transaction_seq,
 
